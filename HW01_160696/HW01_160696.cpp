@@ -7,7 +7,7 @@ namespace ccglib {
 	struct vector3D {
 		double x, y, z;
 		vector3D(): x(0), y(0), z(0) {}
-		vector3D(int _x, int _y, int _z): x(_x), y(_y), z(_z) {}
+		vector3D(double _x, double _y, double _z): x(_x), y(_y), z(_z) {}
 		vector3D operator-() const {
 			return vector3D(-x, -y, -z);
 		}
