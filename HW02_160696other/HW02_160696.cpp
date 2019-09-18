@@ -91,7 +91,7 @@ int main() {
 			for (int i = 0; i < n; i++) 
 				cin >> polygon[i].x >> polygon[i].y;
 			int ans = ccglib::convex2D_tests(polygon);
-			cout << (abs(ans) == 1 ? "CONVEX" : "NON-CONVEX") << endl;
+			cout << (ans != -2 ? "CONVEX" : "NON-CONVEX") << endl;
 		} else if (c == 'a') {
 			ccglib::vector3D obj[2], v_obj[2];
 			for (int i = 0; i < 2; i++) 
