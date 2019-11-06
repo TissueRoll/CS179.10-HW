@@ -81,42 +81,26 @@ istream& operator>>(istream &i, ccglib::vector3D &v) {
 	return i;
 }
 
-int n; double D, L, HA, HB, ERRDIST; 
+int n; double HA, HB; 
 double alpha, beta, gammma, delta;
 
 int main () {
 	cout.precision(0);
 	cout << fixed;
-	cin >> n >> D >> L >> HA >> HB >> ERRDIST;
+	cin >> n >> HA >> HB;
+	double theta = atan2(HB-HA, 100.0);
 	for (int i = 1; i <= n; i++) {
-		cout << i << ' ';
 		cin >> alpha >> beta >> gammma >> delta;
-		if ((alpha <= 0.0 or alpha >= 90.0) or (beta <= 0.0 or beta >= 90.0) or (gammma <= 0.0 or gammma >= 90.0) or (delta <= 90.0 or delta >= 180.0)) {
-			cout << "DISQUALIFIED" << endl;
-			continue;
-		}
 		alpha *= conversion; beta *= conversion; gammma *= conversion; delta *= conversion;
-		ccglib::vector3D A(-D/2.0, 0, HA), B(D/2.0, 0, HB), Ap(-D/2.0,0,0), Bp(D/2.0,0,0);
+		ccglib::vector3D A(-50.0, 0, HA), B(50.0, 0, HB);
 		ccglib::vector3D U(cos(gammma)*cos(alpha), sin(gammma)*cos(alpha), sin(alpha)), V(cos(delta)*cos(beta), sin(delta)*cos(beta), sin(beta));
-		ccglib::vector3D ApU = A+U; ccglib::vector3D BpV = B+V;
 		// L0(t) = A + tU
 		// L1(s) = B + sV
-		ccglib::vector3D AN = (Ap-A)%(ApU-A);
-		ccglib::vector3D BN = (Bp-B)%(BpV-B);
-		ccglib::vector3D Pd = AN%BN;
-		ccglib::vector3D Pm = BN*((-A)*AN)-AN*((-B)*BN);
-		ccglib::vector3D pt = (Pd%Pm)/(Pd*Pd); 
-
-		double t = ((pt-A)*((U%Pd)%Pd))/(U*((U%Pd)%Pd));
+		double t = ((B-A)*((U%V)%V))/(U*((U%V)%V));
 		ccglib::vector3D result0 = A+U*t;
-		// cout << result0 << endl;
-		double s = ((pt-B)*((Pd%V)%Pd))/(V*((Pd%V)%Pd));
+		double s = ((A-B)*((U%V)%U))/(V*((U%V)%U));
 		ccglib::vector3D result1 = B+V*s;
-		// cout << result1 << endl;
-		if (abs(ccglib::norm(result1-result0)) > ERRDIST)
-			cout << "ERROR" << endl;
-		else
-			cout << (result0.z+result1.z)/2.0 << endl;
+		cout << i << ": " << (result0.z+result1.z)/2.0 << endl;
 	}
 	return 0;
 }
