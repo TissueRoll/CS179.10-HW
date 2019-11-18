@@ -81,16 +81,6 @@ istream& operator>>(istream &i, pdd &z) {
 	return i;
 }
 
-ostream& operator<<(ostream &o, const ccglib::vector3D &v) {
-	o << v.x << ' ' << v.y << ' ' << v.z;
-	return o;
-}
-
-istream& operator>>(istream &i, ccglib::vector3D &v) {
-	i >> v.x >> v.y >> v.z;
-	return i;
-}
-
 bool intersecting(line l0, line l1) {
 	ccglib::vector3D u = l0.b-l0.a, v = l1.b-l1.a;
 	ccglib::vector3D n = u%v;
