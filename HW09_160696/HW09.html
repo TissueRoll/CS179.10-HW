@@ -1,0 +1,224 @@
+<!doctype html>
+
+<html>
+<meta charset="utf-8">
+<title>SAT — 160696</title>
+<style>
+body {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	padding: 0;
+	margin: 0;
+}
+#c {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+}
+#s {
+	position: absolute;
+	overflow: wrap;
+
+	left: 10px;
+	width: 150px;
+	top: 10px;
+}
+#result {
+	position: absolute;
+	right: 10px;
+	width: 150px;
+	top: 10px;
+}
+</style>
+
+<body>
+<canvas id="c"></canvas>
+<div id="s">Left click to place polygon A, right click to place polygon B. Press enter to commit polygon being edited.</div>
+<div id="result"></div>
+<script>
+var s = document.getElementById("s");
+var c = document.getElementById("c");
+var r = document.getElementById("result");
+c.width = c.clientWidth;
+c.height = c.clientHeight;
+
+var g = c.getContext('2d');
+
+
+var current_point = -1;
+var editing = 0;
+var polygonA = [];
+var polygonB = [];
+
+var intersection = null;
+
+function draw() {
+	g.clearRect(0, 0, c.width, c.height);
+	g.beginPath();
+	if ( polygonA.length > 0 ) {
+		g.moveTo(polygonA[0][0], polygonA[0][1]);
+	}
+
+	for ( var i = 1; i < polygonA.length; ++i ) {
+		g.lineTo(polygonA[i][0], polygonA[i][1]);
+	}
+	g.closePath();
+	g.strokeStyle = '#F00';
+	g.stroke();
+
+	g.beginPath();
+	if ( polygonB.length > 0 ) {
+		g.moveTo(polygonB[0][0], polygonB[0][1]);
+	}
+
+	for ( var i = 1; i < polygonB.length; ++i ) {
+		g.lineTo(polygonB[i][0], polygonB[i][1]);
+	}
+	g.closePath();
+	g.strokeStyle = '#00F';
+	g.stroke();
+
+	//draw the vector and distance from the point on A closest to B
+	if ( intersection ) {
+		//find the point on A furthest along the direction
+		//aka the support GJK function
+		var idv = intersection;
+		var maxAidx = 0;
+		var maxA = Number.NEGATIVE_INFINITY;
+		for (var i = polygonA.length - 1; i >= 0; i--) {
+			var p = polygonA[i][0] * idv[0] + polygonA[i][1] * idv[1];
+			if ( maxA < p ) {
+				maxA = p;
+				maxAidx = i;
+			}
+		}
+		if ( polygonA.length <= maxAidx ) {
+			return;
+		}
+		var pa = polygonA[maxAidx];
+
+		g.beginPath();
+		g.moveTo(pa[0], pa[1]);
+		g.lineTo(pa[0] + idv[0], pa[1] + idv[1]);
+		g.strokeStyle = '#2A4';
+		g.stroke();
+	}
+}
+
+c.addEventListener('mousedown', function(ev) {
+	if ( ev.button == 0 ) {
+		if ( editing != 1 ) {
+			polygonA = [[ev.x, ev.y]];
+			editing = 1;
+			current_point = 0;
+		}
+		polygonA.push([ev.x, ev.y]);
+		++current_point;
+	} else {
+		if ( editing != 2 ) {
+			polygonB = [[ev.x, ev.y]];
+			editing = 2;
+			current_point = 0;
+		}
+		polygonB.push([ev.x, ev.y]);
+		++current_point;
+		ev.preventDefault();
+	}
+
+	draw();
+	return false;
+});
+c.oncontextmenu = function() { return false; }
+
+c.addEventListener('mousemove', function(ev) {
+	if ( editing == 1 ) {
+		polygonA[current_point][0] = ev.x;
+		polygonA[current_point][1] = ev.y;
+		draw();
+	} else if ( editing == 2 ) {
+		polygonB[current_point][0] = ev.x;
+		polygonB[current_point][1] = ev.y;
+		draw();
+	}
+});
+
+document.addEventListener('keypress', function(ev) {
+	if ( ev.keyCode == 13 ) {
+		editing = 0;
+
+		intersection = sat(polygonA, polygonB);
+		if ( intersection ) {
+			var dist = Math.hypot(intersection[0], intersection[1]);
+			r.innerText = "Intersecting. Distance: " + dist;
+		} else {
+			r.innerText = "Separated";
+		}
+	}
+	draw();
+});
+
+window.addEventListener('resize', function(ev) {
+	c.width = c.clientWidth;
+	c.height = c.clientHeight;
+	draw();
+});
+
+</script>
+
+<script>
+function sat(polygonA, polygonB) {
+	// IMPLEMENT ME
+	// return null if the polygons are separated, else return the array:
+	// [x, y]
+	// which is the penetration vector from A to B. The length of the vector
+	// is the penetration distance. For example, a penetration vector <4,3> with a length
+	// of 50 should be returned as:
+
+	// obv not complete, many bugs
+	var AL = polygonA.length;
+	var BL = polygonB.length;
+	var cA = [polygonA.map(x => x[0]).reduce((a,c) => a+c, 0)/AL, polygonA.map(x => x[1]).reduce((a,c) => a+c, 0)/AL];
+	var cB = [polygonB.map(x => x[0]).reduce((a,c) => a+c, 0)/BL, polygonB.map(x => x[1]).reduce((a,c) => a+c, 0)/BL];
+
+	var axes = [[cA[1]-cB[1], cB[0]-cA[0]]];
+	for (var i = 1; i < AL; i++)
+		axes.push([polygonA[i-1][1]-polygonA[i][1], polygonA[i][0]-polygonA[i-1][0]]);
+	axes.push([polygonA[AL-1][1]-polygonA[0][1], polygonA[0][0]-polygonA[AL-1][0]]);
+	for (var i = 1; i < BL; i++)
+		axes.push([polygonB[i-1][1]-polygonB[i][1], polygonB[i][0]-polygonB[i-1][0]]);
+	axes.push([polygonB[BL-1][1]-polygonB[0][1], polygonB[0][0]-polygonB[BL-1][0]]);
+	console.log(axes);
+	axes = axes.map(x => [x[0]/Math.hypot(x[0],x[1]), x[1]/Math.hypot(x[0],x[1])]);
+	console.log(axes);
+	var overlap = Number.MAX_VALUE;
+	var axis = null;
+	for (var x of axes) {
+		var intervalA = [polygonA.reduce((a,c) => Math.min(a,c[0]*x[0]+c[1]*x[1]), Number.POSITIVE_INFINITY), polygonA.reduce((a,c) => Math.max(a,c[0]*x[0]+c[1]*x[1]), Number.NEGATIVE_INFINITY)];
+		var intervalB = [polygonB.reduce((a,c) => Math.min(a,c[0]*x[0]+c[1]*x[1]), Number.POSITIVE_INFINITY), polygonB.reduce((a,c) => Math.max(a,c[0]*x[0]+c[1]*x[1]), Number.NEGATIVE_INFINITY)];
+		// console.log(intervalA);
+		// console.log(intervalB);
+		var cIA = (intervalA[0]+intervalA[1])/2;
+		var cIB = (intervalB[0]+intervalB[1])/2;
+		var wIA = Math.abs(intervalA[0]-intervalA[1])/2;
+		var wIB = Math.abs(intervalB[0]-intervalB[1])/2;
+		var result = wIA+wIB-Math.abs(cIB-cIA);
+		if (result < 0)
+			return axis;
+		else if (result >= 0 && result < overlap) {
+			overlap = result;
+			axis = x;
+		}
+	}
+
+	console.log("axis: " + axis);
+	if (axis !== null)
+		axis.map(x => x*overlap);
+	console.log("new axis: " + axis);
+
+	return axis;
+}
+</script>
+</body>
+</html>
