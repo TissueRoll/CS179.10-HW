@@ -139,6 +139,7 @@ struct comp {
 	}
 };
 
+// bentley ottman broken for non-distinct lines
 void bentley_ottman(vector<line>& in, int& n) {
 	vector<line> pts;
 	for (int i = 0; i < n; i++) {
@@ -147,14 +148,16 @@ void bentley_ottman(vector<line>& in, int& n) {
 	}
 	sort(pts.begin(), pts.end());
 	set<pair<int,int>> ans;
-	map<line,bool,comp> m;
-	map<line,bool,comp>::iterator mi;
+	map<line,int,comp> m;
+	map<line,int,comp>::iterator mi;
 	bool prev_ok, next_ok;
 	line prev_x, next_x;
 	for (int i = 0; i < pts.size(); i++) { 
 		line x = pts[i];
+		cout << ":: " << x.index << endl;
 		if (x.ep == 0) {
-			m.insert({x,1});
+			// m.insert({x,1});
+			m[x]++;
 			auto mi0 = m.find(x);
 			auto mi1 = mi0; auto mi2 = mi0;
 			prev_ok = (mi0 != m.begin()); 
@@ -168,17 +171,22 @@ void bentley_ottman(vector<line>& in, int& n) {
 			if (next_ok and intersecting(x, next_x))
 				ans.insert({min(next_x.index,x.index),max(next_x.index,x.index)});
 		} else {
+			cout << x.index << " close " << m.size() << endl;
 			auto mi0 = m.find(in[x.index]);
+			cout << "ded" << endl;
 			auto mi1 = mi0; auto mi2 = mi0;
 			prev_ok = (mi0 != m.begin()); 
-			next_ok = (mi0 != m.end() and (mi2++) != m.end());
+			next_ok = (mi0 != m.end() and (++mi2) != m.end());
 			if (prev_ok)
 				prev_x = (--mi1)->first;
 			if (next_ok)
 				next_x = mi2->first;
 			if (prev_ok and next_ok and intersecting(prev_x, next_x))
 				ans.insert({min(prev_x.index,next_x.index),max(prev_x.index,next_x.index)});
-			m.erase(mi0);
+			if (mi0->second <= 1)
+				m.erase(mi0);
+			else
+				mi0->second--;
 		}
 	}
 	cout << ans.size() << ' ';
@@ -200,8 +208,8 @@ int main () {
 				swap(p1,p2);
 			in.push_back(line(p1,p2,0,i));
 		}
-		line_sweep(in, n);
-		// bentley_ottman(in, n);
+		line_sweep(in, n); // O(n lg n + k) algorithm, where k is number of intersections. O(n^2) if k = n^2
+		// bentley_ottman(in, n); // BROKEN; O(n lg n + k lg n), actually worse if k = n^2
 	}
 	return 0;
 }

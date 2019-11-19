@@ -170,52 +170,59 @@ window.addEventListener('resize', function(ev) {
 <script>
 function sat(polygonA, polygonB) {
 	// IMPLEMENT ME
-	// return null if the polygons are separated, else return the array:
-	// [x, y]
-	// which is the penetration vector from A to B. The length of the vector
-	// is the penetration distance. For example, a penetration vector <4,3> with a length
-	// of 50 should be returned as:
+	// return null if the polygons are separated, else return the array: // done
+	// [x, y] // assuming everything is correct, done
+	// which is the penetration vector from A to B. The length of the vector // unsure
+	// is the penetration distance. For example, a penetration vector <4,3> with a length  // unsure
+	// of 50 should be returned as: // supposedly ok with the normalization
 
 	// obv not complete, many bugs
+
+	// helper functions
+	var vsub = function(p0, p1) {return [p1[0]-p0[0], p1[1]-p0[1]];};
+	var perp = function(p) {return [-p[1], p[0]];};
+	var dot = function(u, v) {return u[0]*v[0]+u[1]*v[1];};
+	var norm = function(v) {return Math.hypot(v[0],v[1]);};
+
 	var AL = polygonA.length;
 	var BL = polygonB.length;
+
+	// polygon centroids
 	var cA = [polygonA.map(x => x[0]).reduce((a,c) => a+c, 0)/AL, polygonA.map(x => x[1]).reduce((a,c) => a+c, 0)/AL];
 	var cB = [polygonB.map(x => x[0]).reduce((a,c) => a+c, 0)/BL, polygonB.map(x => x[1]).reduce((a,c) => a+c, 0)/BL];
 
-	var axes = [[cA[1]-cB[1], cB[0]-cA[0]]];
+	// getting all axes
+	var axes = [perp(vsub(cA,cB))];
 	for (var i = 1; i < AL; i++)
-		axes.push([polygonA[i-1][1]-polygonA[i][1], polygonA[i][0]-polygonA[i-1][0]]);
-	axes.push([polygonA[AL-1][1]-polygonA[0][1], polygonA[0][0]-polygonA[AL-1][0]]);
+		axes.push(perp(vsub(polygonA[i-1], polygonA[i]))); 
+	axes.push(perp(vsub(polygonA[AL-1], polygonA[0])));
 	for (var i = 1; i < BL; i++)
-		axes.push([polygonB[i-1][1]-polygonB[i][1], polygonB[i][0]-polygonB[i-1][0]]);
-	axes.push([polygonB[BL-1][1]-polygonB[0][1], polygonB[0][0]-polygonB[BL-1][0]]);
-	console.log(axes);
-	axes = axes.map(x => [x[0]/Math.hypot(x[0],x[1]), x[1]/Math.hypot(x[0],x[1])]);
-	console.log(axes);
+		axes.push(perp(vsub(polygonB[i-1], polygonB[i]))); 
+	axes.push(perp(vsub(polygonB[BL-1], polygonB[0])));
+
+	// normalize each axis
+	axes = axes.map(x => [x[0]/norm(x), x[1]/norm(x)]);
+
 	var overlap = Number.MAX_VALUE;
 	var axis = null;
 	for (var x of axes) {
-		var intervalA = [polygonA.reduce((a,c) => Math.min(a,c[0]*x[0]+c[1]*x[1]), Number.POSITIVE_INFINITY), polygonA.reduce((a,c) => Math.max(a,c[0]*x[0]+c[1]*x[1]), Number.NEGATIVE_INFINITY)];
-		var intervalB = [polygonB.reduce((a,c) => Math.min(a,c[0]*x[0]+c[1]*x[1]), Number.POSITIVE_INFINITY), polygonB.reduce((a,c) => Math.max(a,c[0]*x[0]+c[1]*x[1]), Number.NEGATIVE_INFINITY)];
-		// console.log(intervalA);
-		// console.log(intervalB);
+		var intervalA = [polygonA.reduce((a,c) => Math.min(a,dot(c,x)), Number.POSITIVE_INFINITY), polygonA.reduce((a,c) => Math.max(a,dot(c,x)), Number.NEGATIVE_INFINITY)];
+		var intervalB = [polygonB.reduce((a,c) => Math.min(a,dot(c,x)), Number.POSITIVE_INFINITY), polygonB.reduce((a,c) => Math.max(a,dot(c,x)), Number.NEGATIVE_INFINITY)];
 		var cIA = (intervalA[0]+intervalA[1])/2;
 		var cIB = (intervalB[0]+intervalB[1])/2;
 		var wIA = Math.abs(intervalA[0]-intervalA[1])/2;
 		var wIB = Math.abs(intervalB[0]-intervalB[1])/2;
-		var result = wIA+wIB-Math.abs(cIB-cIA);
+		var result = wIA+wIB-Math.abs(cIA-cIB);
 		if (result < 0)
-			return axis;
+			return null;
 		else if (result >= 0 && result < overlap) {
 			overlap = result;
 			axis = x;
 		}
 	}
 
-	console.log("axis: " + axis);
 	if (axis !== null)
-		axis.map(x => x*overlap);
-	console.log("new axis: " + axis);
+		axis = axis.map(x => x*overlap);
 
 	return axis;
 }
