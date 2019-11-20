@@ -2,7 +2,7 @@
 
 <html>
 <meta charset="utf-8">
-<title>GJK — [YOUR ID NUMBER HERE]</title>
+<title>GJK — 160696</title>
 <style>
 body {
 	position: absolute;
@@ -176,6 +176,38 @@ function gjk(polygonA, polygonB) {
 	// [[ax, ay], [bx,by]]
 	// Where <ax, ay> is the point on polygonA closest to polygonB
 	// and <bx, by> is the point on polygonB closest to polygonA
+
+	var vneg = function(p) {return [-p[0], -p[1]];};
+	var vsub = function(p0, p1) {return [p1[0]-p0[0], p1[1]-p0[1]];};
+	var perp = function(p) {return [-p[1], p[0]];};
+	var dot = function(u, v) {return u[0]*v[0]+u[1]*v[1];};
+	var cross = function(u,v) {return u[0]*v[1]-u[1]*v[0];};
+	var norm = function(v) {return Math.hypot(v[0],v[1]);};
+
+	var gofar = function(poly, d) {
+		var best = Number.NEGATIVE_INFINITY;
+		var pt = null;
+		for (var x of poly) {
+			if (best < dot(x,d)) {
+				best = dot(x,d);
+				pt = x;
+			}
+		}
+		return pt;
+	};
+	var support = function(polyA, polyB, d) {return vsub(gofar(polyA, d), gofar(polyB, vneg(d)));};
+
+	var d = [1,0];
+
+	var triangle = [support(polygonA, polygonB, d)];
+	d = vneg(d);
+
+	while (true) {
+		triangle.push(support(polygonA, polygonB, d));
+		if ()
+	}
+
+
 	return [ [100, 100], [240, 440] ];
 }
 </script>
