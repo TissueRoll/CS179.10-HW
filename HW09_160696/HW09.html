@@ -190,9 +190,10 @@ function sat(polygonA, polygonB) {
 	// polygon centroids
 	var cA = [polygonA.map(x => x[0]).reduce((a,c) => a+c, 0)/AL, polygonA.map(x => x[1]).reduce((a,c) => a+c, 0)/AL];
 	var cB = [polygonB.map(x => x[0]).reduce((a,c) => a+c, 0)/BL, polygonB.map(x => x[1]).reduce((a,c) => a+c, 0)/BL];
+	var AB = vsub(cA,cB);
 
 	// getting all axes
-	var axes = [perp(vsub(cA,cB))];
+	var axes = [AB];
 	for (var i = 1; i < AL; i++)
 		axes.push(perp(vsub(polygonA[i-1], polygonA[i]))); 
 	axes.push(perp(vsub(polygonA[AL-1], polygonA[0])));
@@ -221,8 +222,11 @@ function sat(polygonA, polygonB) {
 		}
 	}
 
-	if (axis !== null)
+	if (axis !== null) {
+		if (dot(axis,AB) <= 0)
+			overlap = -overlap;
 		axis = axis.map(x => x*overlap);
+	}
 
 	return axis;
 }

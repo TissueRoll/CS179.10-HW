@@ -1,0 +1,183 @@
+<!doctype html>
+
+<html>
+<meta charset="utf-8">
+<title>GJK — [YOUR ID NUMBER HERE]</title>
+<style>
+body {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	padding: 0;
+	margin: 0;
+}
+#c {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+}
+#s {
+	position: absolute;
+	overflow: wrap;
+
+	left: 10px;
+	width: 150px;
+	top: 10px;
+}
+#result {
+	position: absolute;
+	right: 10px;
+	width: 150px;
+	top: 10px;
+}
+</style>
+
+<body>
+<canvas id="c"></canvas>
+<div id="s">Left click to place polygon A, right click to place polygon B. Press enter to commit polygon being edited.</div>
+<div id="result"></div>
+<script>
+var s = document.getElementById("s");
+var c = document.getElementById("c");
+var r = document.getElementById("result");
+c.width = c.clientWidth;
+c.height = c.clientHeight;
+
+var g = c.getContext('2d');
+
+
+var current_point = -1;
+var editing = 0;
+var polygonA = [];
+var polygonB = [];
+
+var distance = null;
+
+function draw() {
+	g.clearRect(0, 0, c.width, c.height);
+	g.beginPath();
+	if ( polygonA.length > 0 ) {
+		g.moveTo(polygonA[0][0], polygonA[0][1]);
+	}
+
+	for ( var i = 1; i < polygonA.length; ++i ) {
+		g.lineTo(polygonA[i][0], polygonA[i][1]);
+	}
+	g.closePath();
+	g.strokeStyle = '#F00';
+	g.stroke();
+
+	g.beginPath();
+	if ( polygonB.length > 0 ) {
+		g.moveTo(polygonB[0][0], polygonB[0][1]);
+	}
+
+	for ( var i = 1; i < polygonB.length; ++i ) {
+		g.lineTo(polygonB[i][0], polygonB[i][1]);
+	}
+	g.closePath();
+	g.strokeStyle = '#00F';
+	g.stroke();
+
+	//draw the closest points and the line between them
+	if ( distance ) {
+		var pa = distance[0];
+		var pb = distance[1];
+
+		g.beginPath();
+		g.moveTo(pa[0], pa[1]);
+		g.lineTo(pb[0], pb[1]);
+		g.strokeStyle = '#2A4';
+		g.stroke();
+
+		g.beginPath();
+		g.ellipse(pa[0], pa[1], 5, 5, 0, 0, Math.PI * 2);
+		g.strokeStyle = '#FA0';
+		g.fillStyle = '#FA0';
+		g.stroke();
+		g.fill();
+
+		g.beginPath();
+		g.ellipse(pb[0], pb[1], 5, 5, 0, 0, Math.PI * 2);
+		g.strokeStyle = '#0AF';
+		g.fillStyle = '#0AF';
+		g.stroke();
+		g.fill();
+
+		g.fillStyle = null;
+	}
+}
+
+c.addEventListener('mousedown', function(ev) {
+	if ( ev.button == 0 ) {
+		if ( editing != 1 ) {
+			polygonA = [[ev.x, ev.y]];
+			editing = 1;
+			current_point = 0;
+		}
+		polygonA.push([ev.x, ev.y]);
+		++current_point;
+	} else {
+		if ( editing != 2 ) {
+			polygonB = [[ev.x, ev.y]];
+			editing = 2;
+			current_point = 0;
+		}
+		polygonB.push([ev.x, ev.y]);
+		++current_point;
+		ev.preventDefault();
+	}
+
+	draw();
+	return false;
+});
+c.oncontextmenu = function() { return false; }
+
+c.addEventListener('mousemove', function(ev) {
+	if ( editing == 1 ) {
+		polygonA[current_point][0] = ev.x;
+		polygonA[current_point][1] = ev.y;
+		draw();
+	} else if ( editing == 2 ) {
+		polygonB[current_point][0] = ev.x;
+		polygonB[current_point][1] = ev.y;
+		draw();
+	}
+});
+
+document.addEventListener('keypress', function(ev) {
+	if ( ev.keyCode == 13 ) {
+		editing = 0;
+
+		distance = gjk(polygonA, polygonB);
+		if ( distance ) {
+			var dist = Math.hypot(distance[0][0] - distance[1][0], distance[0][1] - distance[1][1]);
+			r.innerText = "Separated. Distance: " + dist;
+		} else {
+			r.innerText = "Intersecting";
+		}
+	}
+	draw();
+});
+
+window.addEventListener('resize', function(ev) {
+	c.width = c.clientWidth;
+	c.height = c.clientHeight;
+	draw();
+});
+
+</script>
+
+<script>
+function gjk(polygonA, polygonB) {
+	// IMPLEMENT ME
+	// return null if the polygons are intersecting, else return the array:
+	// [[ax, ay], [bx,by]]
+	// Where <ax, ay> is the point on polygonA closest to polygonB
+	// and <bx, by> is the point on polygonB closest to polygonA
+	return [ [100, 100], [240, 440] ];
+}
+</script>
+</body>
+</html>
