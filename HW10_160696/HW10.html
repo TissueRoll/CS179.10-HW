@@ -196,16 +196,32 @@ function gjk(polygonA, polygonB) {
 		return pt;
 	};
 	var support = function(polyA, polyB, d) {return vsub(gofar(polyA, d), gofar(polyB, vneg(d)));};
+	var contains_origin = function(simplex) {
+		
+	};
+	var is_intersecting = function(polyA, polyB) {
+		var d = [1,0];
 
-	var d = [1,0];
+		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d), [0,0]];
 
-	var triangle = [support(polygonA, polygonB, d)];
-	d = vneg(d);
-
-	while (true) {
-		triangle.push(support(polygonA, polygonB, d));
-		if ()
-	}
+		while (true) {
+			d = perp(vsub(triangle[1],triangle[0]));
+			d = (dot(d,vneg(triangle[0])) >= 0 ? d : vneg(d));
+			triangle[2] = support(polygonA, polygonB, d);
+			if (dot(triangle[2],d) <= 0) {
+				return false;
+			} else {
+				if (contains_origin(triangle)) {
+					return true;
+				} else { // iterate
+					// check triangle[2]-triangle[1] and triangle[2]-triangle[0]
+					// if check which of it is closer between the two lines
+					var d21 = perp(vsub(triangle[2], triangle[1]));
+					var d20 = perp(vsub(triangle[2], triangle[0]));
+				}
+			}
+		}
+	};
 
 
 	return [ [100, 100], [240, 440] ];
