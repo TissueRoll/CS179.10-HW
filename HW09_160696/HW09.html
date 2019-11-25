@@ -169,15 +169,6 @@ window.addEventListener('resize', function(ev) {
 
 <script>
 function sat(polygonA, polygonB) {
-	// IMPLEMENT ME
-	// return null if the polygons are separated, else return the array: // done
-	// [x, y] // assuming everything is correct, done
-	// which is the penetration vector from A to B. The length of the vector // unsure
-	// is the penetration distance. For example, a penetration vector <4,3> with a length  // unsure
-	// of 50 should be returned as: // supposedly ok with the normalization
-
-	// obv not complete, many bugs
-
 	// helper functions
 	var vsub = function(p0, p1) {return [p1[0]-p0[0], p1[1]-p0[1]];};
 	var perp = function(p) {return [-p[1], p[0]];};
