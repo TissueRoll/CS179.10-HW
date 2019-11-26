@@ -170,6 +170,73 @@ window.addEventListener('resize', function(ev) {
 </script>
 
 <script>
+// HELPER FUNCTIONS
+function vneg(p) {
+	return [-p[0], -p[1]];
+}
+function vsub(p0, p1) { // returns p1-p0
+	return [p1[0]-p0[0], p1[1]-p0[1]];
+}
+function perp(p) {
+	return [-p[1], p[0]];
+}
+function dot(u, v) {
+	return u[0]*v[0]+u[1]*v[1];
+}
+function norm(v) {
+	return Math.hypot(v[0],v[1]);
+}
+function nearest_in_segment(u, v, p) {
+	
+}
+
+// GJK HELPER FUNCTIONS
+function gofar(poly, d) {
+	var best = Number.NEGATIVE_INFINITY;
+	var pt = null;
+	for (var x of poly) {
+		if (best < dot(x,d)) {
+			best = dot(x,d);
+			pt = x;
+		}
+	}
+	return pt;
+}
+function support(polyA, polyB, d) {
+	return vsub(gofar(polyB, vneg(d)), gofar(polyA, d));
+}
+function contains_origin(simplex) {
+	var v0 = vsub(simplex[0],simplex[1]);
+	var v1 = vsub(simplex[0],simplex[2]);
+	var v2 = vneg(simplex[0]);
+	var d00 = dot(v0,v0);
+	var d01 = dot(v0,v1);
+	var d11 = dot(v1,v1);
+	var d20 = dot(v0,v2);
+	var d21 = dot(v1,v2);
+	var denom = d00*d11 - d01*d01;
+	var alpha = (d11*d20-d01*d21) / denom;
+	var beta = (d00*d20-d01*d20) / denom;
+	var gamma = 1.0-alpha-beta;
+	var d = null;
+	// VORONOI REGIONS
+	if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+		return null;
+	} else if (alpha <= 0 && beta >= 0) {
+		d = perp(vsub(simplex[1],simplex[2]));
+		d = (dot(d,vneg(simplex[1])) >= 0 ? d : vneg(d));
+		return [d, [1,2]];
+	} else if (beta <= 0 && alpha >= 0) {
+		d = perp(vsub(simplex[0],simplex[2]));
+		d = (dot(d,vneg(simplex[0])) >= 0 ? d : vneg(d));
+		return [d, [0,2]];
+	} else {
+		d = perp(vsub(simplex[0],simplex[2]));
+		d = (dot(d,vneg(simplex[0])) >= 0 ? d : vneg(d));
+		return [d, [0,2]];
+	}	
+}
+
 function gjk(polygonA, polygonB) {
 	// IMPLEMENT ME
 	// return null if the polygons are intersecting, else return the array:
@@ -177,61 +244,15 @@ function gjk(polygonA, polygonB) {
 	// Where <ax, ay> is the point on polygonA closest to polygonB
 	// and <bx, by> is the point on polygonB closest to polygonA
 
-	var vneg = function(p) {return [-p[0], -p[1]];};
-	var vsub = function(p0, p1) {return [p1[0]-p0[0], p1[1]-p0[1]];};
-	var perp = function(p) {return [-p[1], p[0]];};
-	var dot = function(u, v) {return u[0]*v[0]+u[1]*v[1];};
-	var cross = function(u,v) {return u[0]*v[1]-u[1]*v[0];};
-	var norm = function(v) {return Math.hypot(v[0],v[1]);};
-
 	// go find the point nearest to a direction
-	var gofar = function(poly, d) {
-		var best = Number.NEGATIVE_INFINITY;
-		var pt = null;
-		for (var x of poly) {
-			if (best < dot(x,d)) {
-				best = dot(x,d);
-				pt = x;
-			}
-		}
-		return pt;
-	};
-	var support = function(polyA, polyB, d) {return vsub(gofar(polyA, d), gofar(polyB, vneg(d)));};
-	var contains_origin = function(simplex) { // returns null if origin is contained, else returns a direction to go
-		// alternative solns
-		//	cross triple product
-		//	convert to barycentric
-		//		pt = alpha simplex[0] + beta simplex[1] + (1-alpha-beta) simplex[2]
-		//		pt = [simplex[0][0] simplex[1][0] simplex[2][0]] [alpha]
-		//			 [simplex[0][1] simplex[1][1] simplex[2][1]] [beta]
-
-		// ASSUMES THAT 0 IS ON THE RIGHT AND 1 IS ON THE LEFT
-		// CANT HANDLE IF TRIANGLE IS UPSIDE DOWN
-		if (simplex[0][0] < simplex[1][0]) {
-			var temp = simplex[0];
-			simplex[0] = simplex[1];
-			simplex[1] = temp;
-		}
-		var r = cross(vsub(simplex[0], simplex[2]), -simplex[0]);
-		var l = cross(-simplex[1],vsub(simplex[1], simplex[2]));
-		if (r >= 0 && l <= 0) { // in between
-			return null;
-		} else if (r >= 0 && l >= 0) { // left segment
-			return perp(vsub(simplex[1],simplex[2]));
-		} else if (r <= 0 && l <= 0) { // right segment
-			return perp(vsub(simplex[2],simplex[0]));
-		} else { // top
-			return vneg(perp(vsub(simplex[1],simplex[2])));
-		}
-	};
 	// intersection test
 	var is_intersecting = function(polyA, polyB) {
 		var d = [1,0]; // pointed right
 
-		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d), [0,0]];
+		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d)), [0,0]];
 
 		while (true) {
-			d = perp(vsub(triangle[1],triangle[0]));
+			d = perp(vsub(triangle[0],triangle[1]));
 			d = (dot(d,vneg(triangle[0])) >= 0 ? d : vneg(d));
 			triangle[2] = support(polygonA, polygonB, d);
 			if (dot(triangle[2],d) <= 0) {
@@ -241,13 +262,20 @@ function gjk(polygonA, polygonB) {
 				if (d == null) {
 					return true;
 				} else { // iterate
-					// check which of it is closer to origin between the two lines
-					var d21 = perp(vsub(triangle[2], triangle[1]));
-					var d20 = perp(vsub(triangle[2], triangle[0]));
+					var temp = triangle[d[1][0]];
+					triangle[0] = triangle[d[1][1]];
+					triangle[1] = temp;
 				}
 			}
 		}
 	};
+
+	var min_dist = function(polyA, polyB) {
+		var d = [1,0];
+
+		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d)), [0,0]];
+
+	}
 
 	// check if they intersect
 	if (is_intersecting(polygonA, polygonB)) {
@@ -255,9 +283,9 @@ function gjk(polygonA, polygonB) {
 	}
 
 	// segment crawl
-	while (true) {
+	// while (true) {
 		
-	}
+	// }
 
 	return [ [100, 100], [240, 440] ];
 }
