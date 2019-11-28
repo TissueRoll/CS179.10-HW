@@ -174,8 +174,14 @@ window.addEventListener('resize', function(ev) {
 function vneg(p) {
 	return [-p[0], -p[1]];
 }
+function vadd(p0, p1) {
+	return [p0[0]+p1[0], p0[1]+p1[1]];
+}
 function vsub(p0, p1) { // returns p1-p0
 	return [p1[0]-p0[0], p1[1]-p0[1]];
+}
+function vmult(v, t) {
+	return v.map(x => x*t);
 }
 function perp(p) {
 	return [-p[1], p[0]];
@@ -186,8 +192,13 @@ function dot(u, v) {
 function norm(v) {
 	return Math.hypot(v[0],v[1]);
 }
-function nearest_in_segment(u, v, p) {
-	
+function nearest_in_segment(a, b, p) {
+	var u = vsub(a,p);
+	var v = vsub(a,b);
+	var t = dot(v,u)/dot(v,v);
+	if (t < 0) t = 0;
+	else if (t > 1) t = 1;
+	return vadd(a,vmult(v,t));
 }
 
 // GJK HELPER FUNCTIONS
@@ -203,7 +214,9 @@ function gofar(poly, d) {
 	return pt;
 }
 function support(polyA, polyB, d) {
-	return vsub(gofar(polyB, vneg(d)), gofar(polyA, d));
+	var point_in_B = gofar(polyB, vneg(d));
+	var point_in_A = gofar(polyA, d);
+	return [vsub(point_in_B, point_in_A), point_in_A, point_in_B];
 }
 function contains_origin(simplex) {
 	var v0 = vsub(simplex[0],simplex[1]);
@@ -248,46 +261,118 @@ function gjk(polygonA, polygonB) {
 	// intersection test
 	var is_intersecting = function(polyA, polyB) {
 		var d = [1,0]; // pointed right
+		var ind = 0;
+		var cur, temp1, temp2;
+		var triangle = [[0,0], [0,0], [0,0]];
+		cur = support(polyA, polyB, d)[0];
+		triangle[0] = cur;
 
-		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d)), [0,0]];
-
-		while (true) {
-			d = perp(vsub(triangle[0],triangle[1]));
-			d = (dot(d,vneg(triangle[0])) >= 0 ? d : vneg(d));
-			triangle[2] = support(polygonA, polygonB, d);
-			if (dot(triangle[2],d) <= 0) {
-				return false;
-			} else {
-				d = contains_origin(triangle);
-				if (d == null) {
-					return true;
-				} else { // iterate
-					var temp = triangle[d[1][0]];
-					triangle[0] = triangle[d[1][1]];
-					triangle[1] = temp;
-				}
-			}
+		if (dot(cur, d) <= 0) {
+			return false;
 		}
+
+		d = vneg(d);
+
+		cur = support(polyA, polyB, d)[0];
+		triangle[1] = cur;
+
+		if (dot(cur, d) <= 0) {
+			return false;
+		}
+
+		d = perp(vsub(triangle[0],triangle[1]));
+		d = (dot(d,vneg(triangle[0])) >= 0 ? d : vneg(d));
+
+		
+		var breaker = 0;
+		while (true) {
+			// console.log("breaker: " + breaker);
+			cur = support(polyA, polyB, d)[0];
+			triangle[2] = cur;
+
+			if (dot(cur,d) <= 0) {
+				return false;
+			}
+
+			d = contains_origin(triangle);
+			if (d == null) {
+				return true;
+			} else {
+				var temp = triangle[d[1][0]];
+				triangle[0] = triangle[d[1][1]];
+				triangle[1] = temp;
+				d = d[0];
+			}
+
+			// if (breaker === 1000)
+			// 	break;
+			
+			// breaker++;
+		}
+		
 	};
 
-	var min_dist = function(polyA, polyB) {
-		var d = [1,0];
+	var closest_points = function(a, b) {
+		var v = vsub(a[0], b[0]);
+		if (norm(v) === 0) {
+			return [a[1], a[2]];
+		} else {
+			var l1 = dot(v,v);
+			var l2 = -dot(v,a[0])/l1;
 
-		var triangle = [support(polygonA, polygonB, d), support(polygonA, polygonB, vneg(d)), [0,0]];
+			if (l2 > 1) {
+				return [b[1], b[2]];
+			} else if (l2 < 0) {
+				return [a[1], a[2]];
+			} else {
+				var ac = vadd(vmult(a[1],1-l2), vmult(b[1], l2));
+				var bc = vadd(vmult(a[2],1-l2), vmult(b[2], l2));
+				return [ac, bc];
+			}
+		}
+	}
+
+	var min_dist = function(polyA, polyB) {
+		// theres an eisenbug here
+		var d = [1,0];
+		var eps = 0.0000000001;
+		var line = [support(polyA, polyB, d), support(polyA, polyB, vneg(d))];
+		d = nearest_in_segment(line[0][0], line[1][0], [0,0]);
+		var breaker = 0;
+		while (breaker < 100) {
+			d = vneg(d);
+			if (dot(d,d) < 0) {
+				return null;
+			}
+			var pt = support(polyA, polyB, d);
+			var dpt = dot(d,pt[0]);
+			var da = dot(d,line[0][0]);
+			if (dpt - da < eps) {
+				// this is it
+				return closest_points(line[0], line[1]);
+			}
+			var t1 = nearest_in_segment(line[0][0], pt[0], [0,0]);
+			var t2 = nearest_in_segment(pt[0], line[1][0], [0,0]);
+			if (norm(t1) < norm(t2)) {
+				line[1] = pt;
+				d = t1;
+			} else {
+				line[0] = pt;
+				d = t2;
+			}
+			breaker++;
+		}
 
 	}
 
 	// check if they intersect
+	console.log(is_intersecting(polygonA, polygonB));
 	if (is_intersecting(polygonA, polygonB)) {
 		return null;
 	}
 
 	// segment crawl
-	// while (true) {
-		
-	// }
-
-	return [ [100, 100], [240, 440] ];
+	return min_dist(polygonA, polygonB);
 }
 </script>
 </body>
